@@ -4,48 +4,82 @@ import {
   InitiateRegistration,
   LoginUser,
   LogoutUser,
-  // RegisterUser,
+  RefreshTokens,
   VerifyOtpAndRegister,
+  RegistrationStatus,
+  ResendOtp,
 } from "../controller/UserController.js";
-import { body } from "express-validator";
+import { body, param } from "express-validator";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
-// import { sendOtpToEmail } from "../controller/SendOtpController.js";
+
 const UserRoute = express.Router();
 
-UserRoute.route("/Register", [
-  body("firstName").trim().notEmpty().withMessage("First name is required"),
-  body("lastName").trim().notEmpty().withMessage("Last name is required"),
-  body("email").isEmail().withMessage("Please provide a valid email"),
-  body("password")
-    .isLength({ min: 8 })
-    .withMessage("Password must be at least 8 characters long")
-    .matches(/\d/)
-    .withMessage("Password must contain at least one number")
-    .matches(/[a-z]/)
-    .withMessage("Password must contain at least one lowercase letter")
-    .matches(/[A-Z]/)
-    .withMessage("Password must contain at least one uppercase letter"),
-]).post(InitiateRegistration);
+// Registration endpoints
+UserRoute.post(
+  "/register",
+  [
+    body("firstName").trim().notEmpty().withMessage("First name is required"),
+    body("lastName").trim().notEmpty().withMessage("Last name is required"),
+    body("email").isEmail().withMessage("Please provide a valid email"),
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long")
+      .matches(/\d/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain at least one lowercase letter")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter"),
+  ],
+  InitiateRegistration
+);
 
-UserRoute.route("/Register/verify-otp", [
-  body("verificationId").notEmpty().withMessage("Verification ID is required"),
-  body("otp")
-    .notEmpty()
-    .withMessage("OTP is required")
-    .isLength({ min: 6, max: 6 })
-    .withMessage("OTP must be 6 digits")
-    .isNumeric()
-    .withMessage("OTP must contain only numbers"),
-]).post(VerifyOtpAndRegister);
+// OTP verification route using URL parameters for verification ID
+UserRoute.post(
+  "/register/verify-otp/:verificationId",
+  [
+    param("verificationId")
+      .notEmpty()
+      .withMessage("Verification ID is required"),
+    body("otp")
+      .notEmpty()
+      .withMessage("OTP is required")
+      .isLength({ min: 6, max: 6 })
+      .withMessage("OTP must be 6 digits")
+      .isNumeric()
+      .withMessage("OTP must contain only numbers"),
+  ],
+  VerifyOtpAndRegister
+);
 
-UserRoute.route("/login", [
-  body("email").isEmail().withMessage("Email is required"),
-  body("password").notEmpty().withMessage("Password is required"),
-]).post(LoginUser);
+//resend-otp
+UserRoute.post(
+  "/register/resend-otp",
+  [body("email").isEmail().withMessage("Valid email is required")],
+  ResendOtp
+);
 
-UserRoute.route("/Logout").get(authMiddleware, LogoutUser);
+UserRoute.post(
+  "/login",
+  [
+    body("email").isEmail().withMessage("Email is required"),
+    body("password").notEmpty().withMessage("Password is required"),
+  ],
+  LoginUser
+);
 
-UserRoute.route("/getUser").get(authMiddleware, getCurrentUser);
+// Token management
+UserRoute.post("/refresh-token", RefreshTokens);
+UserRoute.get("/logout", authMiddleware, LogoutUser);
 
-// UserRoute.route("/send-otp").post(sendOtpToEmail);
+// User data
+UserRoute.get("/me", authMiddleware, getCurrentUser);
+
+// Check registration status (new endpoint)
+UserRoute.get(
+  "/registration-status",
+  [body("email").isEmail().withMessage("Valid email is required")],
+  RegistrationStatus
+);
+
 export default UserRoute;

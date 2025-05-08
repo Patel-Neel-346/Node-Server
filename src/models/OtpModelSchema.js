@@ -1,12 +1,6 @@
 import mongoose from "mongoose";
 
-// Update your OTP model to include registration data
-const otpSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: false, // Not required for registration
-  },
+const OtpSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
@@ -15,25 +9,30 @@ const otpSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  registrationData: {
+  purpose: {
+    type: String,
+    enum: ['registration', 'login', 'password-reset'],
+    required: true
+  },
+  // For registration purposes only - store minimal user data
+  userData: {
     firstName: String,
     lastName: String,
-    email: String,
-    password: String,
   },
   expiresAt: {
     type: Date,
     required: true,
+    default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes expiry
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  // If the OTP is for existing users (login, password reset)
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   },
 });
 
-// Auto-delete expired OTPs
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Add index for quick searching and automatic expiry
+OtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-const Otp = mongoose.model("Otp", otpSchema);
-
+const Otp = mongoose.model("Otp", OtpSchema);
 export default Otp;
