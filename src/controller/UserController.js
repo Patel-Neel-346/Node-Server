@@ -430,3 +430,49 @@ export const RegistrationStatus = asyncHandler(async (req, res) => {
         : "User registration complete",
   });
 });
+
+export const InitiatePasswordReset = asyncHandler(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(422, "Validation Error", errors.array()));
+  }
+
+  const { email } = req.body;
+
+  // Check if user exists with active status
+  const user = await User.findOne({ email, status: "active" });
+  if (!user) {
+    return next(new ApiError(404, "No active account found with this email"));
+  }
+
+  // Delete any existing password reset OTPs for this user
+  await Otp.deleteMany({
+    userId: user._id,
+    purpose: "password-reset",
+  });
+
+  // Generate OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP as string
+
+  // Store OTP verification data
+  const otpDoc = await Otp.create({
+    email,
+    otp,
+    purpose: "password-reset",
+    userId: user._id,
+    expiresAt: Date.now() + 10 * 60 * 1000, // OTP expires in 10 minutes
+  });
+
+  // Send OTP to user's email
+  await sendOTP(email, otp, "Password Reset");
+
+  // const verificationId = otpDoc._id;
+
+  res.status(200).json({
+    success: true,
+    message:
+      "Password reset OTP sent to your email. Please verify to reset your password.",
+    // verificationId,
+    // verificationUrl: `/api/v1/user/password-reset/verify-otp/${verificationId}`,
+  });
+});
