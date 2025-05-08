@@ -11,14 +11,10 @@ const OtpSchema = new mongoose.Schema({
   },
   purpose: {
     type: String,
-    enum: ['registration', 'login', 'password-reset'],
-    required: true
+    enum: ["registration", "login", "password-reset"],
+    required: true,
   },
-  // For registration purposes only - store minimal user data
-  userData: {
-    firstName: String,
-    lastName: String,
-  },
+
   expiresAt: {
     type: Date,
     required: true,
