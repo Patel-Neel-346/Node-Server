@@ -18,36 +18,26 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
 
   const { firstName, lastName, email, password } = req.body;
 
-  // Check if user already exists
   const existingUser = await User.findOne({ email });
 
-  // If user exists but has 'pending' status, they started registration but didn't complete it
   if (existingUser) {
     if (existingUser.status === "pending") {
-      // Delete existing pending OTPs for this user
       await Otp.deleteMany({
         userId: existingUser._id,
         purpose: "registration",
       });
 
-      // Update the existing pending user record instead of creating a new one
       const hashedPassword = await bcrypt.hash(password, 10);
       existingUser.firstName = firstName;
       existingUser.lastName = lastName;
       existingUser.password = hashedPassword;
       await existingUser.save();
-
-      // Continue with OTP generation below (we'll reuse this pending user)
     } else if (existingUser.status === "active") {
-      // Only return error if the user is already active
       return next(
         new ApiError(409, "User already exists. Please login instead.")
       );
     }
   }
-
-  // Create a temporary user record with status "pending" only if it doesn't already exist
-  // This approach gives us a single source of truth for user data
   const hashedPassword = !existingUser
     ? await bcrypt.hash(password, 10)
     : existingUser.password;
@@ -59,31 +49,25 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       lastName,
       email,
       password: hashedPassword,
-      status: "pending", // Add this field to UserModel schema
+      status: "pending",
     }));
 
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP as string
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store minimal OTP verification data
   const otpDoc = await Otp.create({
     email,
     otp,
     purpose: "registration",
     userId: pendingUser._id,
-    expiresAt: Date.now() + 10 * 60 * 1000, // OTP expires in 10 minutes
+    expiresAt: Date.now() + 10 * 60 * 1000,
   });
 
-  // Send OTP to user's email
   await sendOTP(email, otp);
-
-  const verificationId = otpDoc._id;
 
   res.status(200).json({
     success: true,
     message: "OTP sent to your email. Please verify to complete registration.",
-    verificationId,
-    verificationUrl: `/api/v1/user/register/verify-otp/${verificationId}`,
+    email: email,
   });
 });
 
@@ -93,11 +77,19 @@ export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
     return next(new ApiError(422, "Validation Error", errors.array()));
   }
 
-  const verificationId = req.params.verificationId || req.body.verificationId;
-  const { otp } = req.body;
+  const { email, otp } = req.body;
+
+  if (!email) {
+    return next(new ApiError(400, "Please provide user email"));
+  }
+
+  if (!otp) {
+    return next(new ApiError(400, "Please provide OTP"));
+  }
 
   const otpDocument = await Otp.findOne({
-    _id: verificationId,
+    email,
+    purpose: "registration",
     expiresAt: { $gt: Date.now() },
   });
 
@@ -121,7 +113,7 @@ export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
   user.status = "active";
   await user.save();
 
-  await Otp.deleteOne({ _id: verificationId });
+  await Otp.deleteOne({ _id: otpDocument._id });
 
   const payload = {
     sub: user._id,
