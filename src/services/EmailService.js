@@ -1,60 +1,27 @@
-// import nodemailer from "nodemailer";
-// import { ApiError } from "../helpers/ApiError.js";
-// import { config } from "../Config/index.js";
-
-// const transporter = nodemailer.createTransport({
-//   service: "gmail",
-//   auth: {
-//     user: config.EMAIL,
-//     pass: config.EMAIL_PASSWORD,
-//   },
-// });
-
-// export const sendOTP = async (email, otp) => {
-//   const mailOptions = {
-//     from: config.EMAIL, // Sender's email address
-//     to: email, // Recipient's email address
-//     subject: "Your OTP Code",
-//     html: `<p>Your OTP code is <strong>${otp}</strong>. It will expire in 10 minutes.</p>`, // Email body
-//   };
-
-//   try {
-//     await transporter.sendMail(mailOptions);
-//   } catch (err) {
-//     console.error("Error sending OTP email:", err);
-//     throw new ApiError(500, "Failed to send OTP email");
-//   }
-// };
-
 import nodemailer from "nodemailer";
 import { ApiError } from "../helpers/ApiError.js";
 import { config } from "../Config/index.js";
 
-// Create reusable transporter object using SMTP transport
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: config.EMAIL,
     pass: config.EMAIL_PASSWORD,
   },
-  // Enable secure SSL/TLS connection
   secure: true,
 });
 
 export const sendOTP = async (email, otp, purpose = "Registration") => {
-  // Generate email subject based on purpose
   const subject =
     purpose === "Password Reset"
       ? "Password Reset Request - Your OTP Code"
       : "Account Verification - Your OTP Code";
 
-  // Generate action text based on purpose
   const actionText =
     purpose === "Password Reset"
       ? "reset your password"
       : "verify your account";
 
-  // Create HTML email template with better styling
   const html = `
     <!DOCTYPE html>
     <html>
@@ -125,20 +92,17 @@ export const sendOTP = async (email, otp, purpose = "Registration") => {
   `;
 
   const mailOptions = {
-    from: `"Auth Service" <${config.EMAIL}>`, // Sender name and email
-    to: email, // Recipient's email address
+    from: `"Auth Service" <${config.EMAIL}>`,
+    to: email,
     subject: subject,
     html: html,
   };
 
   try {
-    // Verify connection configuration
     await transporter.verify();
 
-    // Send mail with defined transport object
     const info = await transporter.sendMail(mailOptions);
 
-    // Log message ID for debugging if needed
     console.log(`Email sent to ${email}: ${info.messageId}`);
 
     return info;
