@@ -354,38 +354,38 @@ export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
   }
 });
 
-export const ResendOtp = asyncHandler(async (req, res, next) => {
-  const { email } = req.body;
+// export const ResendOtp = asyncHandler(async (req, res, next) => {
+//   const { email } = req.body;
 
-  const pendingUser = await User.findOne({ email, status: "pending" });
-  if (!pendingUser) {
-    return next(
-      new ApiError(404, "No pending registration found for this email")
-    );
-  }
+//   const pendingUser = await User.findOne({ email, status: "pending" });
+//   if (!pendingUser) {
+//     return next(
+//       new ApiError(404, "No pending registration found for this email")
+//     );
+//   }
 
-  await Otp.deleteMany({ userId: pendingUser._id, purpose: "registration" });
+//   await Otp.deleteMany({ userId: pendingUser._id, purpose: "registration" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  const otpDoc = await Otp.create({
-    email,
-    otp,
-    purpose: "registration",
-    userId: pendingUser._id,
-    expiresAt: Date.now() + 10 * 60 * 1000,
-  });
+//   const otpDoc = await Otp.create({
+//     email,
+//     otp,
+//     purpose: "registration",
+//     userId: pendingUser._id,
+//     expiresAt: Date.now() + 10 * 60 * 1000,
+//   });
 
-  // Send OTP
-  await sendOTP(email, otp);
+//   // Send OTP
+//   await sendOTP(email, otp);
 
-  res.status(200).json({
-    success: true,
-    message: "New OTP sent to your email",
-    verificationId: otpDoc._id,
-    verificationUrl: `/api/v1/user/register/verify-otp/${otpDoc._id}`,
-  });
-});
+//   res.status(200).json({
+//     success: true,
+//     message: "New OTP sent to your email",
+//     verificationId: otpDoc._id,
+//     verificationUrl: `/api/v1/user/register/verify-otp/${otpDoc._id}`,
+//   });
+// });
 
 export const cleanupPendingUsers = asyncHandler(async () => {
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -621,6 +621,229 @@ export const RegistrationStatus = asyncHandler(async (req, res) => {
   });
 });
 
+// export const InitiatePasswordReset = asyncHandler(async (req, res, next) => {
+//   try {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return next(new ApiError(422, "Validation Error", errors.array()));
+//     }
+
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return next(new ApiError(400, "Email is required"));
+//     }
+
+//     const user = await User.findOne({ email, status: "active" });
+//     if (!user) {
+//       return next(new ApiError(404, "No active account found with this email"));
+//     }
+
+//     await Otp.deleteMany({
+//       email,
+//       purpose: "password-reset",
+//     });
+
+//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+//     await Otp.create({
+//       email,
+//       otp,
+//       purpose: "password-reset",
+//       userId: user._id,
+//       expiresAt: Date.now() + 10 * 60 * 1000,
+//     });
+
+//     await sendOTP(email, otp, "Password Reset");
+
+//     res.status(200).json({
+//       success: true,
+//       message:
+//         "Password reset OTP sent to your email. Please check your inbox.",
+//       email: email,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     throw new ApiError(500, "Internal server Error");
+//   }
+// });
+
+// export const VerifyOtpAndResetPassword = asyncHandler(
+//   async (req, res, next) => {
+//     try {
+//       const errors = validationResult(req);
+//       if (!errors.isEmpty()) {
+//         return next(new ApiError(422, "Validation Error", errors.array()));
+//       }
+
+//       const { otp, email, newPassword } = req.body;
+
+//       if (!email) {
+//         return next(new ApiError(400, "Please provide user email"));
+//       }
+
+//       if (!otp) {
+//         return next(new ApiError(400, "Please provide OTP"));
+//       }
+
+//       if (!newPassword) {
+//         return next(new ApiError(400, "Please provide new password"));
+//       }
+
+//       const otpRecord = await Otp.findOne({
+//         email,
+//         purpose: "password-reset",
+//         expiresAt: { $gt: Date.now() },
+//       }).populate("userId");
+
+//       if (!otpRecord) {
+//         return next(
+//           new ApiError(
+//             404,
+//             "OTP not found or expired. Please request a new one."
+//           )
+//         );
+//       }
+
+//       if (otpRecord.otp !== otp) {
+//         return next(new ApiError(400, "Invalid OTP. Please try again."));
+//       }
+
+//       const user = await User.findOne({ email, status: "active" });
+//       if (!user) {
+//         return next(
+//           new ApiError(404, "User not found or account is not active")
+//         );
+//       }
+
+//       const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+//       user.password = hashedPassword;
+//       await user.save();
+
+//       await Otp.deleteOne({ _id: otpRecord._id });
+
+//       res.status(200).json({
+//         success: true,
+//         otpDoc,
+//         message:
+//           "Password has been reset successfully. You can now log in with your new password.",
+//       });
+//     } catch (error) {
+//       throw new ApiError(500, "inerval server Error");
+//     }
+//   }
+// );
+
+// export const ResendPasswordResetOtp = asyncHandler(async (req, res, next) => {
+//   try {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return next(new ApiError(422, "Validation Error", errors.array()));
+//     }
+
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return next(new ApiError(400, "Email is required"));
+//     }
+
+//     const user = await User.findOne({ email, status: "active" });
+//     if (!user) {
+//       return next(new ApiError(404, "No active account found with this email"));
+//     }
+
+//     await Otp.deleteMany({
+//       email,
+//       purpose: "password-reset",
+//     });
+
+//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+//     await Otp.create({
+//       email,
+//       otp,
+//       purpose: "password-reset",
+//       userId: user._id,
+//       expiresAt: Date.now() + 10 * 60 * 1000,
+//     });
+
+//     await sendOTP(email, otp, "Password Reset");
+
+//     res.status(200).json({
+//       success: true,
+//       message:
+//         "New password reset OTP sent to your email. Please check your inbox.",
+//       email: email,
+//     });
+//   } catch (error) {
+//     throw new ApiError(500, "Internal Server Error");
+//   }
+// });
+
+export const ResendOtp = asyncHandler(async (req, res, next) => {
+  const { email, phoneNumber } = req.body;
+
+  if (!email && !phoneNumber) {
+    return next(
+      new ApiError(400, "Please provide either email or phone number")
+    );
+  }
+
+  // Build query based on provided identifiers
+  const query = { status: "pending" };
+  if (email) query.email = email;
+  if (phoneNumber) query.phoneNumber = phoneNumber;
+
+  const pendingUser = await User.findOne(query);
+  if (!pendingUser) {
+    return next(
+      new ApiError(
+        404,
+        "No pending registration found for this contact information"
+      )
+    );
+  }
+
+  // Delete any existing OTPs for this user
+  await Otp.deleteMany({ userId: pendingUser._id, purpose: "registration" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Determine notification methods based on available contact information
+  const notificationMethods = [];
+  if (email) notificationMethods.push("email");
+  if (phoneNumber) notificationMethods.push("sms");
+
+  const otpDoc = await Otp.create({
+    email,
+    phoneNumber,
+    otp,
+    notificationMethods,
+    purpose: "registration",
+    userId: pendingUser._id,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+
+  // Send OTP via email if email is provided
+  if (email) {
+    await sendOTP(email, otp);
+  }
+
+  // Send OTP via SMS if phone number is provided
+  if (phoneNumber) {
+    await SendSMS(phoneNumber, otp);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `New OTP sent to your ${notificationMethods.join(" and ")}`,
+    email: email || null,
+    phoneNumber: phoneNumber || null,
+  });
+});
+
+// Updated InitiatePasswordReset function
 export const InitiatePasswordReset = asyncHandler(async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -628,39 +851,67 @@ export const InitiatePasswordReset = asyncHandler(async (req, res, next) => {
       return next(new ApiError(422, "Validation Error", errors.array()));
     }
 
-    const { email } = req.body;
+    const { email, phoneNumber } = req.body;
 
-    if (!email) {
-      return next(new ApiError(400, "Email is required"));
+    if (!email && !phoneNumber) {
+      return next(
+        new ApiError(400, "Please provide either email or phone number")
+      );
     }
 
-    const user = await User.findOne({ email, status: "active" });
+    // Build query based on provided identifiers
+    const query = { status: "active" };
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query);
     if (!user) {
-      return next(new ApiError(404, "No active account found with this email"));
+      return next(
+        new ApiError(
+          404,
+          "No active account found with this contact information"
+        )
+      );
     }
 
-    await Otp.deleteMany({
-      email,
-      purpose: "password-reset",
-    });
+    // Delete any existing OTPs for this purpose
+    const otpDeleteQuery = { userId: user._id, purpose: "password-reset" };
+    await Otp.deleteMany(otpDeleteQuery);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Determine notification methods based on provided contact information
+    const notificationMethods = [];
+    if (email) notificationMethods.push("email");
+    if (phoneNumber) notificationMethods.push("sms");
+
     await Otp.create({
-      email,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
       otp,
+      notificationMethods,
       purpose: "password-reset",
       userId: user._id,
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    await sendOTP(email, otp, "Password Reset");
+    // Send OTP via email if available
+    if (email) {
+      await sendOTP(email, otp, "Password Reset");
+    }
+
+    // Send OTP via SMS if phone number is available
+    if (phoneNumber) {
+      await SendSMS(phoneNumber, otp, "Password Reset");
+    }
 
     res.status(200).json({
       success: true,
-      message:
-        "Password reset OTP sent to your email. Please check your inbox.",
-      email: email,
+      message: `Password reset OTP sent to your ${notificationMethods.join(
+        " and "
+      )}. Please check for the verification code.`,
+      email: email || null,
+      phoneNumber: phoneNumber || null,
     });
   } catch (error) {
     console.log(error);
@@ -668,6 +919,7 @@ export const InitiatePasswordReset = asyncHandler(async (req, res, next) => {
   }
 });
 
+// Updated VerifyOtpAndResetPassword function
 export const VerifyOtpAndResetPassword = asyncHandler(
   async (req, res, next) => {
     try {
@@ -676,10 +928,12 @@ export const VerifyOtpAndResetPassword = asyncHandler(
         return next(new ApiError(422, "Validation Error", errors.array()));
       }
 
-      const { otp, email, newPassword } = req.body;
+      const { otp, email, phoneNumber, newPassword } = req.body;
 
-      if (!email) {
-        return next(new ApiError(400, "Please provide user email"));
+      if (!email && !phoneNumber) {
+        return next(
+          new ApiError(400, "Please provide either email or phone number")
+        );
       }
 
       if (!otp) {
@@ -690,11 +944,18 @@ export const VerifyOtpAndResetPassword = asyncHandler(
         return next(new ApiError(400, "Please provide new password"));
       }
 
-      const otpRecord = await Otp.findOne({
-        email,
+      // Build query to find the OTP record
+      const query = {
         purpose: "password-reset",
         expiresAt: { $gt: Date.now() },
-      }).populate("userId");
+        otp: otp,
+      };
+
+      // Add identifier conditions to the query
+      if (email) query.email = email;
+      if (phoneNumber) query.phoneNumber = phoneNumber;
+
+      const otpRecord = await Otp.findOne(query).populate("userId");
 
       if (!otpRecord) {
         return next(
@@ -709,7 +970,12 @@ export const VerifyOtpAndResetPassword = asyncHandler(
         return next(new ApiError(400, "Invalid OTP. Please try again."));
       }
 
-      const user = await User.findOne({ email, status: "active" });
+      // Find the user using the user ID from the OTP record
+      const user = await User.findOne({
+        _id: otpRecord.userId,
+        status: "active",
+      });
+
       if (!user) {
         return next(
           new ApiError(404, "User not found or account is not active")
@@ -725,16 +991,17 @@ export const VerifyOtpAndResetPassword = asyncHandler(
 
       res.status(200).json({
         success: true,
-        otpDoc,
         message:
           "Password has been reset successfully. You can now log in with your new password.",
       });
     } catch (error) {
-      throw new ApiError(500, "inerval server Error");
+      console.error(error);
+      throw new ApiError(500, "Internal server Error");
     }
   }
 );
 
+// Updated ResendPasswordResetOtp function
 export const ResendPasswordResetOtp = asyncHandler(async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -742,41 +1009,70 @@ export const ResendPasswordResetOtp = asyncHandler(async (req, res, next) => {
       return next(new ApiError(422, "Validation Error", errors.array()));
     }
 
-    const { email } = req.body;
+    const { email, phoneNumber } = req.body;
 
-    if (!email) {
-      return next(new ApiError(400, "Email is required"));
+    if (!email && !phoneNumber) {
+      return next(
+        new ApiError(400, "Please provide either email or phone number")
+      );
     }
 
-    const user = await User.findOne({ email, status: "active" });
+    // Build query based on provided identifiers
+    const query = { status: "active" };
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const user = await User.findOne(query);
     if (!user) {
-      return next(new ApiError(404, "No active account found with this email"));
+      return next(
+        new ApiError(
+          404,
+          "No active account found with this contact information"
+        )
+      );
     }
 
-    await Otp.deleteMany({
-      email,
-      purpose: "password-reset",
-    });
+    // Delete any existing OTPs for this purpose
+    const otpDeleteQuery = { userId: user._id, purpose: "password-reset" };
+    await Otp.deleteMany(otpDeleteQuery);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Determine notification methods based on provided contact information
+    const notificationMethods = [];
+    if (email) notificationMethods.push("email");
+    if (phoneNumber) notificationMethods.push("sms");
+
     await Otp.create({
-      email,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
       otp,
+      notificationMethods,
       purpose: "password-reset",
       userId: user._id,
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    await sendOTP(email, otp, "Password Reset");
+    // Send OTP via email if available
+    if (email) {
+      await sendOTP(email, otp, "Password Reset");
+    }
+
+    // Send OTP via SMS if phone number is available
+    if (phoneNumber) {
+      await SendSMS(phoneNumber, otp, "Password Reset");
+    }
 
     res.status(200).json({
       success: true,
-      message:
-        "New password reset OTP sent to your email. Please check your inbox.",
-      email: email,
+      message: `New password reset OTP sent to your ${notificationMethods.join(
+        " and "
+      )}. Please check for the verification code.`,
+      email: email || null,
+      phoneNumber: phoneNumber || null,
     });
   } catch (error) {
+    console.error(error);
     throw new ApiError(500, "Internal Server Error");
   }
 });
