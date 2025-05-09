@@ -1,8 +1,28 @@
+// src/models/OtpModelSchema.js
 import mongoose from "mongoose";
 
 const OtpSchema = new mongoose.Schema({
   email: {
     type: String,
+    required: function () {
+      return (
+        this.notificationMethods && this.notificationMethods.includes("email")
+      );
+    },
+  },
+  phoneNumber: {
+    type: String,
+    required: function () {
+      return (
+        this.notificationMethods && this.notificationMethods.includes("sms")
+      );
+    },
+  },
+  // Track which methods were used to send the OTP
+  notificationMethods: {
+    type: [String],
+    enum: ["email", "sms", "both"],
+    default: ["email"], // Default to email for backward compatibility
     required: true,
   },
   otp: {
@@ -14,7 +34,6 @@ const OtpSchema = new mongoose.Schema({
     enum: ["registration", "login", "password-reset"],
     required: true,
   },
-
   expiresAt: {
     type: Date,
     required: true,

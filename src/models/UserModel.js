@@ -15,11 +15,8 @@ const UserSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  // Added phone number field
   phoneNumber: {
     type: String,
-    // Not required by default to maintain backward compatibility
-    // but will be validated when provided
     unique: true,
     sparse: true, // This allows null values to exist (for backward compatibility)
   },
