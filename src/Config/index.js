@@ -11,6 +11,9 @@ const {
   NODE_ENV,
   EMAIL,
   EMAIL_PASSWORD,
+  TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN,
+  TWILIO_PHONE_NUMBER,
 } = process.env;
 
 export const config = {
@@ -24,5 +27,8 @@ export const config = {
   NODE_ENV,
   EMAIL,
   EMAIL_PASSWORD,
+  TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN,
+  TWILIO_PHONE_NUMBER,
 };
 //Reset-Password then OTP &&
