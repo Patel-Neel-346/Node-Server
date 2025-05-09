@@ -504,7 +504,7 @@ export const VerifyOtpAndResetPassword = asyncHandler(
         email,
         purpose: "password-reset",
         expiresAt: { $gt: Date.now() },
-      });
+      }).populate("userId");
 
       if (!otpRecord) {
         return next(
@@ -535,6 +535,7 @@ export const VerifyOtpAndResetPassword = asyncHandler(
 
       res.status(200).json({
         success: true,
+        otpDoc,
         message:
           "Password has been reset successfully. You can now log in with your new password.",
       });
