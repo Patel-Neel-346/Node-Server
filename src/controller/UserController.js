@@ -72,91 +72,96 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
 });
 
 export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return next(new ApiError(422, "Validation Error", errors.array()));
-  }
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return next(new ApiError(422, "Validation Error", errors.array()));
+    }
 
-  const { email, otp } = req.body;
+    const { email, otp } = req.body;
 
-  if (!email) {
-    return next(new ApiError(400, "Please provide user email"));
-  }
+    if (!email) {
+      return next(new ApiError(400, "Please provide user email"));
+    }
 
-  if (!otp) {
-    return next(new ApiError(400, "Please provide OTP"));
-  }
+    if (!otp) {
+      return next(new ApiError(400, "Please provide OTP"));
+    }
 
-  const otpDocument = await Otp.findOne({
-    email,
-    purpose: "registration",
-    expiresAt: { $gt: Date.now() },
-  });
+    const otpDocument = await Otp.findOne({
+      email,
+      purpose: "registration",
+      expiresAt: { $gt: Date.now() },
+    }).populate("userId");
 
-  if (!otpDocument) {
-    return next(new ApiError(400, "OTP expired or not found"));
-  }
+    if (!otpDocument) {
+      return next(new ApiError(400, "OTP expired or not found"));
+    }
 
-  if (otpDocument.otp !== otp) {
-    return next(new ApiError(400, "Invalid OTP"));
-  }
+    if (otpDocument.otp !== otp) {
+      return next(new ApiError(400, "Invalid OTP"));
+    }
 
-  const user = await User.findOne({
-    _id: otpDocument.userId,
-    status: "pending",
-  });
+    const user = await User.findOne({
+      _id: otpDocument.userId,
+      status: "pending",
+    });
 
-  if (!user) {
-    return next(new ApiError(404, "Registration session expired or invalid"));
-  }
+    if (!user) {
+      return next(new ApiError(404, "Registration session expired or invalid"));
+    }
 
-  user.status = "active";
-  await user.save();
+    user.status = "active";
+    await user.save();
 
-  await Otp.deleteOne({ _id: otpDocument._id });
+    await Otp.deleteOne({ _id: otpDocument._id });
 
-  const payload = {
-    sub: user._id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-  };
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
 
-  const accessToken = tokenService.generateAccessToken(payload);
-  const refreshTokenDoc = await tokenService.persistRefreshToken(user._id);
-  const refreshToken = tokenService.generateRefreshToken({
-    ...payload,
-    id: refreshTokenDoc._id,
-  });
+    const accessToken = tokenService.generateAccessToken(payload);
+    const refreshTokenDoc = await tokenService.persistRefreshToken(user._id);
+    const refreshToken = tokenService.generateRefreshToken({
+      ...payload,
+      id: refreshTokenDoc._id,
+    });
 
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 1000,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-  });
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      maxAge: 60 * 60 * 1000,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+    });
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-  });
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+    });
 
-  res.status(201).json({
-    success: true,
-    message: "Welcome to Our Website! User registered successfully.",
-    data: {
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
+    res.status(201).json({
+      success: true,
+      message: "Welcome to Our Website! User registered successfully.",
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        },
+        accessToken,
+        refreshToken,
       },
-      accessToken,
-      refreshToken,
-    },
-  });
+    });
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "internal server error");
+  }
 });
 
 export const ResendOtp = asyncHandler(async (req, res, next) => {
@@ -300,7 +305,9 @@ export const RefreshTokens = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(refreshToken, config.JWT_EXPIRES_REFRESH_SECRET);
 
     // Check if token exists in database
-    const refreshTokenDoc = await RefreshToken.findById(decoded.id);
+    const refreshTokenDoc = await RefreshToken.findById(decoded.id).populate(
+      "user"
+    );
     if (!refreshTokenDoc) {
       return next(new ApiError(401, "Invalid refresh token"));
     }
@@ -352,6 +359,7 @@ export const RefreshTokens = asyncHandler(async (req, res, next) => {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       },
+      refreshTokenDoc,
     });
   } catch (err) {
     console.error(err);

@@ -37,13 +37,10 @@ UserRoute.post(
   InitiateRegistration
 );
 
-// OTP verification route using URL parameters for verification ID
 UserRoute.post(
-  "/register/verify-otp/:verificationId",
+  "/register/verify-otp",
   [
-    param("verificationId")
-      .notEmpty()
-      .withMessage("Verification ID is required"),
+    body("email").isEmail().withMessage("Please provide a valid email"),
     body("otp")
       .notEmpty()
       .withMessage("OTP is required")
