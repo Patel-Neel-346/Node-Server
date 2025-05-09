@@ -8,6 +8,9 @@ import {
   VerifyOtpAndRegister,
   RegistrationStatus,
   ResendOtp,
+  InitiatePasswordReset,
+  VerifyOtpAndResetPassword,
+  ResendPasswordResetOtp,
 } from "../controller/UserController.js";
 import { body, param } from "express-validator";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
@@ -80,6 +83,42 @@ UserRoute.get(
   "/registration-status",
   [body("email").isEmail().withMessage("Valid email is required")],
   RegistrationStatus
+);
+
+UserRoute.post(
+  "/password-reset/initiate",
+  [body("email").isEmail().withMessage("Please provide a valid email")],
+  InitiatePasswordReset
+);
+
+UserRoute.post(
+  "/password-reset/verify",
+  [
+    body("email").isEmail().withMessage("Valid email is required"),
+    body("otp")
+      .notEmpty()
+      .withMessage("OTP is required")
+      .isLength({ min: 6, max: 6 })
+      .withMessage("OTP must be 6 digits")
+      .isNumeric()
+      .withMessage("OTP must contain only numbers"),
+    body("newPassword")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long")
+      .matches(/\d/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain at least one lowercase letter")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter"),
+  ],
+  VerifyOtpAndResetPassword
+);
+
+UserRoute.post(
+  "/password-reset/resend-otp",
+  [body("email").isEmail().withMessage("Valid email is required")],
+  ResendPasswordResetOtp
 );
 
 export default UserRoute;
