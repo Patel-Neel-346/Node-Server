@@ -9,6 +9,162 @@ import bcrypt from "bcrypt";
 import { sendOTP } from "../services/EmailService.js";
 import jwt from "jsonwebtoken";
 import { config } from "../Config/index.js";
+// const { SendSMS } = await import("../services/SMS_Service.js");
+import { SendSMS } from "../services/SMS_Service.js";
+
+// export const InitiateRegistration = asyncHandler(async (req, res, next) => {
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return next(new ApiError(422, "Validation Error", errors.array()));
+//   }
+
+//   const { firstName, lastName, email, password } = req.body;
+
+//   const existingUser = await User.findOne({ email });
+
+//   if (existingUser) {
+//     if (existingUser.status === "pending") {
+//       await Otp.deleteMany({
+//         userId: existingUser._id,
+//         purpose: "registration",
+//       });
+
+//       const hashedPassword = await bcrypt.hash(password, 10);
+//       existingUser.firstName = firstName;
+//       existingUser.lastName = lastName;
+//       existingUser.password = hashedPassword;
+//       await existingUser.save();
+//     } else if (existingUser.status === "active") {
+//       return next(
+//         new ApiError(409, "User already exists. Please login instead.")
+//       );
+//     }
+//   }
+//   const hashedPassword = !existingUser
+//     ? await bcrypt.hash(password, 10)
+//     : existingUser.password;
+
+//   const pendingUser =
+//     existingUser ||
+//     (await User.create({
+//       firstName,
+//       lastName,
+//       email,
+//       password: hashedPassword,
+//       status: "pending",
+//     }));
+
+//   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+//   const otpDoc = await Otp.create({
+//     email,
+//     otp,
+//     purpose: "registration",
+//     userId: pendingUser._id,
+//     expiresAt: Date.now() + 10 * 60 * 1000,
+//   });
+
+//   await sendOTP(email, otp);
+
+//   res.status(200).json({
+//     success: true,
+//     message: "OTP sent to your email. Please verify to complete registration.",
+//     email: email,
+//   });
+// });
+
+// export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
+//   try {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return next(new ApiError(422, "Validation Error", errors.array()));
+//     }
+
+//     const { email, otp } = req.body;
+
+//     if (!email) {
+//       return next(new ApiError(400, "Please provide user email"));
+//     }
+
+//     if (!otp) {
+//       return next(new ApiError(400, "Please provide OTP"));
+//     }
+
+//     const otpDocument = await Otp.findOne({
+//       email,
+//       purpose: "registration",
+//       expiresAt: { $gt: Date.now() },
+//     }).populate("userId");
+
+//     if (!otpDocument) {
+//       return next(new ApiError(400, "OTP expired or not found"));
+//     }
+
+//     if (otpDocument.otp !== otp) {
+//       return next(new ApiError(400, "Invalid OTP"));
+//     }
+
+//     const user = await User.findOne({
+//       _id: otpDocument.userId,
+//       status: "pending",
+//     });
+
+//     if (!user) {
+//       return next(new ApiError(404, "Registration session expired or invalid"));
+//     }
+
+//     user.status = "active";
+//     await user.save();
+
+//     await Otp.deleteOne({ _id: otpDocument._id });
+
+//     const payload = {
+//       sub: user._id,
+//       email: user.email,
+//       firstName: user.firstName,
+//       lastName: user.lastName,
+//     };
+
+//     const accessToken = tokenService.generateAccessToken(payload);
+//     const refreshTokenDoc = await tokenService.persistRefreshToken(user._id);
+//     const refreshToken = tokenService.generateRefreshToken({
+//       ...payload,
+//       id: refreshTokenDoc._id,
+//     });
+
+//     res.cookie("accessToken", accessToken, {
+//       httpOnly: true,
+//       maxAge: 60 * 60 * 1000,
+//       sameSite: "strict",
+//       secure: process.env.NODE_ENV === "production",
+//     });
+
+//     res.cookie("refreshToken", refreshToken, {
+//       httpOnly: true,
+//       maxAge: 7 * 24 * 60 * 60 * 1000,
+//       sameSite: "strict",
+//       secure: process.env.NODE_ENV === "production",
+//     });
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Welcome to Our Website! User registered successfully.",
+//       data: {
+//         user: {
+//           id: user._id,
+//           firstName: user.firstName,
+//           lastName: user.lastName,
+//           email: user.email,
+//         },
+//         accessToken,
+//         refreshToken,
+//       },
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     throw new ApiError(500, "internal server error");
+//   }
+// });
 
 export const InitiateRegistration = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
@@ -16,7 +172,7 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
     return next(new ApiError(422, "Validation Error", errors.array()));
   }
 
-  const { firstName, lastName, email, password } = req.body;
+  const { firstName, lastName, email, password, phoneNumber } = req.body;
 
   const existingUser = await User.findOne({ email });
 
@@ -31,6 +187,10 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       existingUser.firstName = firstName;
       existingUser.lastName = lastName;
       existingUser.password = hashedPassword;
+      // Update phone number if provided
+      if (phoneNumber) {
+        existingUser.phoneNumber = phoneNumber;
+      }
       await existingUser.save();
     } else if (existingUser.status === "active") {
       return next(
@@ -38,6 +198,7 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       );
     }
   }
+
   const hashedPassword = !existingUser
     ? await bcrypt.hash(password, 10)
     : existingUser.password;
@@ -48,26 +209,46 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       firstName,
       lastName,
       email,
+      phoneNumber, // Add phone number to the new user
       password: hashedPassword,
       status: "pending",
     }));
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+  // Determine notification methods based on available contact information
+  const notificationMethods = [];
+  if (email) notificationMethods.push("email");
+  if (phoneNumber) notificationMethods.push("sms");
+
   const otpDoc = await Otp.create({
     email,
+    phoneNumber,
     otp,
+    notificationMethods,
     purpose: "registration",
     userId: pendingUser._id,
     expiresAt: Date.now() + 10 * 60 * 1000,
   });
 
-  await sendOTP(email, otp);
+  // Send OTP via email
+  if (email) {
+    await sendOTP(email, otp);
+  }
+
+  // Send OTP via SMS if phone number provided
+  if (phoneNumber) {
+    await SendSMS(phoneNumber, otp);
+  }
 
   res.status(200).json({
     success: true,
-    message: "OTP sent to your email. Please verify to complete registration.",
+    message:
+      "OTP sent to your email" +
+      (phoneNumber ? " and phone" : "") +
+      ". Please verify to complete registration.",
     email: email,
+    phoneNumber: phoneNumber || null,
   });
 });
 
@@ -78,21 +259,29 @@ export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
       return next(new ApiError(422, "Validation Error", errors.array()));
     }
 
-    const { email, otp } = req.body;
+    const { email, phoneNumber, otp } = req.body;
 
-    if (!email) {
-      return next(new ApiError(400, "Please provide user email"));
+    if (!email && !phoneNumber) {
+      return next(
+        new ApiError(400, "Please provide either email or phone number")
+      );
     }
 
     if (!otp) {
       return next(new ApiError(400, "Please provide OTP"));
     }
 
-    const otpDocument = await Otp.findOne({
-      email,
+    // Find OTP document based on email and/or phone number
+    const query = {
       purpose: "registration",
       expiresAt: { $gt: Date.now() },
-    }).populate("userId");
+    };
+
+    // Add identifier conditions to the query
+    if (email) query.email = email;
+    if (phoneNumber) query.phoneNumber = phoneNumber;
+
+    const otpDocument = await Otp.findOne(query).populate("userId");
 
     if (!otpDocument) {
       return next(new ApiError(400, "OTP expired or not found"));
@@ -153,6 +342,7 @@ export const VerifyOtpAndRegister = asyncHandler(async (req, res, next) => {
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
+          phoneNumber: user.phoneNumber || null,
         },
         accessToken,
         refreshToken,

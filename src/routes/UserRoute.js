@@ -1,3 +1,4 @@
+// src/routes/UserRoute.js
 import express from "express";
 import {
   getCurrentUser,
@@ -24,6 +25,11 @@ UserRoute.post(
     body("firstName").trim().notEmpty().withMessage("First name is required"),
     body("lastName").trim().notEmpty().withMessage("Last name is required"),
     body("email").isEmail().withMessage("Please provide a valid email"),
+    // Making phoneNumber optional but validated when provided
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
     body("password")
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters long")
@@ -48,6 +54,11 @@ UserRoute.post(
       .withMessage("OTP must be 6 digits")
       .isNumeric()
       .withMessage("OTP must contain only numbers"),
+    // Phone number is optional for verification
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
   ],
   VerifyOtpAndRegister
 );
@@ -55,7 +66,14 @@ UserRoute.post(
 //resend-otp
 UserRoute.post(
   "/register/resend-otp",
-  [body("email").isEmail().withMessage("Valid email is required")],
+  [
+    body("email").isEmail().withMessage("Valid email is required"),
+    // Phone number is optional for resending OTP
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
+  ],
   ResendOtp
 );
 
@@ -84,7 +102,14 @@ UserRoute.get(
 
 UserRoute.post(
   "/password-reset/initiate",
-  [body("email").isEmail().withMessage("Please provide a valid email")],
+  [
+    body("email").isEmail().withMessage("Please provide a valid email"),
+    // Phone number is optional for password reset
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
+  ],
   InitiatePasswordReset
 );
 
@@ -108,13 +133,25 @@ UserRoute.post(
       .withMessage("Password must contain at least one lowercase letter")
       .matches(/[A-Z]/)
       .withMessage("Password must contain at least one uppercase letter"),
+    // Phone number is optional for verification
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
   ],
   VerifyOtpAndResetPassword
 );
 
 UserRoute.post(
   "/password-reset/resend-otp",
-  [body("email").isEmail().withMessage("Valid email is required")],
+  [
+    body("email").isEmail().withMessage("Valid email is required"),
+    // Phone number is optional for resending OTP
+    body("phoneNumber")
+      .optional()
+      .isMobilePhone()
+      .withMessage("Please provide a valid phone number"),
+  ],
   ResendPasswordResetOtp
 );
 
