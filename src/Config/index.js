@@ -25,3 +25,4 @@ export const config = {
   EMAIL,
   EMAIL_PASSWORD,
 };
+//Reset-Password then OTP &&
