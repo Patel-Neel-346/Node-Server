@@ -14,6 +14,7 @@ MongoDBInsatnce(); // Connect to MongoDB
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
 
 // CORS setup
 // app.use((req, res, next) => {

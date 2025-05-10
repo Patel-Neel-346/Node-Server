@@ -22,6 +22,7 @@ const UserRoute = express.Router();
 // Registration endpoints
 UserRoute.post(
   "/register",
+  upload.single("profilePicture"), // Properly position the middleware
   [
     body("firstName").trim().notEmpty().withMessage("First name is required"),
     body("lastName").trim().notEmpty().withMessage("Last name is required"),
@@ -40,7 +41,6 @@ UserRoute.post(
       .matches(/[A-Z]/)
       .withMessage("Password must contain at least one uppercase letter"),
   ],
-  upload.single("profilePicture"), // Properly position the middleware
   InitiateRegistration
 );
 
