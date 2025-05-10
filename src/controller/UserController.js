@@ -11,6 +11,8 @@ import jwt from "jsonwebtoken";
 import { config } from "../Config/index.js";
 // const { SendSMS } = await import("../services/SMS_Service.js");
 import { SendSMS } from "../services/SMS_Service.js";
+import path from "path";
+import fs from "fs";
 
 export const InitiateRegistration = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
@@ -20,8 +22,12 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
 
   const { firstName, lastName, email, password, phoneNumber } = req.body;
 
-  const ProfilePictureUser = req.files?.path;
-  console.log(ProfilePictureUser);
+  // Proper way to access the uploaded file
+  let profilePicturePath = null;
+  if (req.file) {
+    profilePicturePath = req.file.path.replace(/\\/g, "/"); // Normalize path for different OS
+  }
+
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
@@ -35,15 +41,44 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       existingUser.firstName = firstName;
       existingUser.lastName = lastName;
       existingUser.password = hashedPassword;
+
       // Update phone number if provided
       if (phoneNumber) {
         existingUser.phoneNumber = phoneNumber;
       }
-      if (ProfilePictureUser) {
-        existingUser.profilePicture = ProfilePictureUser;
+
+      // Update profile picture if uploaded
+      if (profilePicturePath) {
+        // If user had an old profile picture, delete it
+        if (
+          existingUser.profilePicture &&
+          existingUser.profilePicture !== profilePicturePath
+        ) {
+          try {
+            const oldPath = path.join(
+              process.cwd(),
+              existingUser.profilePicture
+            );
+            if (fs.existsSync(oldPath)) {
+              fs.unlinkSync(oldPath);
+            }
+          } catch (err) {
+            console.error("Error deleting old profile picture:", err);
+          }
+        }
+        existingUser.profilePicture = profilePicturePath;
       }
+
       await existingUser.save();
     } else if (existingUser.status === "active") {
+      // If a file was uploaded but user already exists, delete the uploaded file
+      if (req.file) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (err) {
+          console.error("Error deleting unused file:", err);
+        }
+      }
       return next(
         new ApiError(409, "User already exists. Please login instead.")
       );
@@ -60,8 +95,9 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       firstName,
       lastName,
       email,
-      phoneNumber, // Add phone number to the new user
+      phoneNumber,
       password: hashedPassword,
+      profilePicture: profilePicturePath,
       status: "pending",
     }));
 
@@ -100,6 +136,7 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       ". Please verify to complete registration.",
     email: email,
     phoneNumber: phoneNumber || null,
+    profilePicture: profilePicturePath ? true : false,
   });
 });
 

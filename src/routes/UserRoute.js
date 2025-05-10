@@ -26,7 +26,6 @@ UserRoute.post(
     body("firstName").trim().notEmpty().withMessage("First name is required"),
     body("lastName").trim().notEmpty().withMessage("Last name is required"),
     body("email").isEmail().withMessage("Please provide a valid email"),
-    // Making phoneNumber optional but validated when provided
     body("phoneNumber")
       .optional()
       .isMobilePhone()
@@ -41,7 +40,7 @@ UserRoute.post(
       .matches(/[A-Z]/)
       .withMessage("Password must contain at least one uppercase letter"),
   ],
-  upload.single("profilePicture"),
+  upload.single("profilePicture"), // Properly position the middleware
   InitiateRegistration
 );
 
