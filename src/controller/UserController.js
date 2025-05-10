@@ -20,6 +20,8 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
 
   const { firstName, lastName, email, password, phoneNumber } = req.body;
 
+  const ProfilePictureUser = req.files?.path;
+  console.log(ProfilePictureUser);
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
@@ -36,6 +38,9 @@ export const InitiateRegistration = asyncHandler(async (req, res, next) => {
       // Update phone number if provided
       if (phoneNumber) {
         existingUser.phoneNumber = phoneNumber;
+      }
+      if (ProfilePictureUser) {
+        existingUser.profilePicture = ProfilePictureUser;
       }
       await existingUser.save();
     } else if (existingUser.status === "active") {

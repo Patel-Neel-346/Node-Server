@@ -15,6 +15,7 @@ import {
 } from "../controller/UserController.js";
 import { body, param } from "express-validator";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
+import upload from "../middleware/Multer_middleware.js";
 
 const UserRoute = express.Router();
 
@@ -40,6 +41,7 @@ UserRoute.post(
       .matches(/[A-Z]/)
       .withMessage("Password must contain at least one uppercase letter"),
   ],
+  upload.single("profilePicture"),
   InitiateRegistration
 );
 
@@ -102,6 +104,7 @@ UserRoute.get(
 
 UserRoute.post(
   "/password-reset/initiate",
+
   [
     body("email").isEmail().withMessage("Please provide a valid email"),
     // Phone number is optional for password reset

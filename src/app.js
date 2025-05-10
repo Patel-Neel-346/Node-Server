@@ -13,6 +13,7 @@ MongoDBInsatnce(); // Connect to MongoDB
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.static("public"));
 
 // CORS setup
 // app.use((req, res, next) => {

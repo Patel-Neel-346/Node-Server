@@ -29,6 +29,9 @@ const UserSchema = new mongoose.Schema({
     enum: ["pending", "active"],
     default: "active",
   },
+  profilePicture: {
+    type: String,
+  },
   registrationAttempts: {
     type: Number,
     default: 0,
