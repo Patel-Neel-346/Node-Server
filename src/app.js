@@ -5,9 +5,27 @@ import { cleanupPendingUsers } from "./controller/UserController.js";
 import cron from "node-cron";
 import MongoDBInsatnce from "./db/DBConnect.js";
 import { config } from "./Config/index.js";
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import { version } from "mongoose";
 
 const PORT = config.PORT || 6000; // Use environment variable or default to 5000
 const app = express();
+
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Authentication App",
+      version: "1.0.0",
+    },
+    servers: [
+      {
+        api: "http://localhost:5000/",
+      },
+    ],
+  },
+};
 
 MongoDBInsatnce(); // Connect to MongoDB
 // Middleware
