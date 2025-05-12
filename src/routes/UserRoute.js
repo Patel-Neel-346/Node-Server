@@ -80,13 +80,13 @@ const UserRoute = express.Router();
  * @swagger
  * tags:
  *   - name: Authentication
- *     description: User authentication operations
+ *     description: User authentication operations including login, logout, and token management
  *   - name: Registration
- *     description: User registration operations
+ *     description: User registration process including OTP verification
  *   - name: User
- *     description: User profile operations
+ *     description: User profile operations and management
  *   - name: Password
- *     description: Password management operations
+ *     description: Password management operations including reset functionality
  */
 
 /**
@@ -95,7 +95,7 @@ const UserRoute = express.Router();
  *   post:
  *     summary: Start user registration
  *     tags: [Registration]
- *     description: Initiates the user registration process by validating user data and sending OTP
+ *     description: Initiates the user registration process by validating user data and sending OTP via email and/or SMS
  *     requestBody:
  *       required: true
  *       content:
@@ -110,16 +110,22 @@ const UserRoute = express.Router();
  *             properties:
  *               firstName:
  *                 type: string
+ *                 example: "John"
  *               lastName:
  *                 type: string
+ *                 example: "Doe"
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *               password:
  *                 type: string
  *                 format: password
+ *                 example: "Password123"
+ *                 description: "Must be at least 8 characters with at least one uppercase letter, one lowercase letter, and one number"
  *               profilePicture:
  *                 type: string
  *                 format: binary
@@ -136,20 +142,31 @@ const UserRoute = express.Router();
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "OTP sent successfully"
  *                 email:
  *                   type: string
+ *                   example: "john.doe@example.com"
  *                 phoneNumber:
  *                   type: string
  *                   nullable: true
+ *                   example: "+1234567890"
  *                 profilePicture:
  *                   type: boolean
+ *                   example: true
  *       422:
  *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email or phone number already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post(
   "/register",
   upload.single("profilePicture"),
@@ -194,11 +211,14 @@ UserRoute.post(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *               otp:
  *                 type: string
  *                 example: "123456"
+ *                 description: "6-digit OTP code received via email or SMS"
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -212,6 +232,7 @@ UserRoute.post(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Registration successful"
  *                 data:
  *                   type: object
  *                   properties:
@@ -220,26 +241,46 @@ UserRoute.post(
  *                       properties:
  *                         id:
  *                           type: string
+ *                           example: "60d21b4667d0d8992e610c85"
  *                         firstName:
  *                           type: string
+ *                           example: "John"
  *                         lastName:
  *                           type: string
+ *                           example: "Doe"
  *                         email:
  *                           type: string
+ *                           example: "john.doe@example.com"
  *                         phoneNumber:
  *                           type: string
  *                           nullable: true
+ *                           example: "+1234567890"
  *                     accessToken:
  *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *                     refreshToken:
  *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
  *         description: Invalid OTP
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: No pending registration found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       410:
+ *         description: OTP expired
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post(
   "/register/verify-otp",
   [
@@ -278,8 +319,10 @@ UserRoute.post(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *     responses:
  *       200:
  *         description: OTP resent successfully
@@ -293,18 +336,28 @@ UserRoute.post(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "OTP resent successfully"
  *                 email:
  *                   type: string
+ *                   example: "john.doe@example.com"
  *                 phoneNumber:
  *                   type: string
  *                   nullable: true
+ *                   example: "+1234567890"
  *       404:
  *         description: No pending registration found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many attempts, please try again later
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post(
   "/register/resend-otp",
   [
@@ -323,52 +376,34 @@ UserRoute.post(
  *   post:
  *     summary: Login user
  *     tags: [Authentication]
- *     description: Authenticates a user and returns tokens
+ *     description: Authenticates a user and returns access and refresh tokens
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
+ *             $ref: '#/components/schemas/LoginRequest'
  *     responses:
  *       200:
  *         description: Login successful
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                     accessToken:
- *                       type: string
- *                     refreshToken:
- *                       type: string
+ *               $ref: '#/components/schemas/TokenResponse'
  *       401:
  *         description: Invalid credentials
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Account not active
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post(
   "/login",
   [
@@ -388,6 +423,17 @@ UserRoute.post(
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: "The refresh token received during login or previous refresh"
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: Tokens refreshed successfully
@@ -401,13 +447,16 @@ UserRoute.post(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Tokens refreshed successfully"
  *                 data:
  *                   type: object
  *                   properties:
  *                     accessToken:
  *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *                     refreshToken:
  *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       401:
  *         description: Invalid refresh token
  *         content:
@@ -415,6 +464,7 @@ UserRoute.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post("/refresh-token", RefreshTokens);
 
 /**
@@ -440,6 +490,7 @@ UserRoute.post("/refresh-token", RefreshTokens);
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Logout successful"
  *       401:
  *         description: Unauthorized
  *         content:
@@ -447,6 +498,7 @@ UserRoute.post("/refresh-token", RefreshTokens);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.get("/logout", authMiddleware, LogoutUser);
 
 /**
@@ -472,6 +524,7 @@ UserRoute.get("/logout", authMiddleware, LogoutUser);
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "User profile fetched successfully"
  *                 data:
  *                   $ref: '#/components/schemas/User'
  *       401:
@@ -481,6 +534,7 @@ UserRoute.get("/logout", authMiddleware, LogoutUser);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.get("/me", authMiddleware, getCurrentUser);
 
 /**
@@ -498,6 +552,7 @@ UserRoute.get("/me", authMiddleware, getCurrentUser);
  *           format: email
  *         required: true
  *         description: Email to check
+ *         example: "john.doe@example.com"
  *     responses:
  *       200:
  *         description: Registration status information
@@ -506,13 +561,19 @@ UserRoute.get("/me", authMiddleware, getCurrentUser);
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 registered:
  *                   type: boolean
+ *                   example: true
  *                 status:
  *                   type: string
  *                   nullable: true
+ *                   example: "active"
  *                 message:
  *                   type: string
+ *                   example: "User is registered and active"
  */
 UserRoute.get(
   "/registration-status",
@@ -539,8 +600,10 @@ UserRoute.get(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *     responses:
  *       200:
  *         description: Password reset OTP sent successfully
@@ -554,12 +617,15 @@ UserRoute.get(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Password reset OTP sent successfully"
  *                 email:
  *                   type: string
  *                   nullable: true
+ *                   example: "john.doe@example.com"
  *                 phoneNumber:
  *                   type: string
  *                   nullable: true
+ *                   example: "+1234567890"
  *       404:
  *         description: No active account found
  *         content:
@@ -600,14 +666,19 @@ UserRoute.post(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *               otp:
  *                 type: string
  *                 example: "123456"
+ *                 description: "6-digit OTP code received via email or SMS"
  *               newPassword:
  *                 type: string
  *                 format: password
+ *                 example: "NewPassword123"
+ *                 description: "Must be at least 8 characters with at least one uppercase letter, one lowercase letter, and one number"
  *     responses:
  *       200:
  *         description: Password reset successful
@@ -621,13 +692,27 @@ UserRoute.post(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Password reset successful"
  *       400:
  *         description: Invalid OTP
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: OTP not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       410:
+ *         description: OTP expired
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
+
 UserRoute.post(
   "/password-reset/verify",
   [
@@ -675,8 +760,10 @@ UserRoute.post(
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "john.doe@example.com"
  *               phoneNumber:
  *                 type: string
+ *                 example: "+1234567890"
  *     responses:
  *       200:
  *         description: Password reset OTP resent successfully
@@ -690,14 +777,23 @@ UserRoute.post(
  *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "Password reset OTP resent successfully"
  *                 email:
  *                   type: string
  *                   nullable: true
+ *                   example: "john.doe@example.com"
  *                 phoneNumber:
  *                   type: string
  *                   nullable: true
+ *                   example: "+1234567890"
  *       404:
  *         description: No active account found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many attempts, please try again later
  *         content:
  *           application/json:
  *             schema:
