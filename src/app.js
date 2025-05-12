@@ -10,7 +10,7 @@ import swaggerUi from "swagger-ui-express";
 import cors from "cors";
 import swaggerOptions from "./helpers/Swagger.js";
 
-const PORT = config.PORT || 6000; // Use environment variable or default to 6000
+export const PORT = config.PORT || 6000; // Use environment variable or default to 6000
 const app = express();
 
 // Swagger configuration

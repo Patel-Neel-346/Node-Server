@@ -1,3 +1,4 @@
+import { config } from "../Config/index.js";
 const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
@@ -17,7 +18,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
+        url: `http://localhost:${config.PORT}`,
         description: "Development server",
       },
       {
