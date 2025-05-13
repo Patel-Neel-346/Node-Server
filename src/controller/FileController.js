@@ -39,7 +39,64 @@ export const uploadFile = asyncHandler(async (req, res, next) => {
     });
   }
 });
-export const getUserFiles = asyncHandler(async (req, res, next) => {});
+export const getUserFiles = asyncHandler(async (req, res, next) => {
+  const userId = req.user.sub;
+
+  const {
+    search = "",
+    fileType = "",
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  // Build filter conditions
+  const filter = { user: userId };
+
+  if (search) {
+    filter.originalName = { $regex: search, $options: "i" };
+  }
+
+  if (fileType) {
+    filter.mimetype = { $regex: fileType, $options: "i" };
+  }
+
+  // Build sort options
+  const sortOptions = {};
+  const allowedSortFields = ["createdAt", "size", "originalName"];
+
+  if (allowedSortFields.includes(sortBy)) {
+    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+  } else {
+    sortOptions.createdAt = -1;
+  }
+  // Calculate pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const files = await File.find(filter)
+    .sort(sortOptions)
+    .skip(skip)
+    .limit(parseInt(limit))
+    .select("-path -__v");
+
+  const total = await File.countDocuments(filter);
+
+  return res.status(200).json({
+    success: true,
+    message: "Files retrieved successfully",
+    data: {
+      files,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    },
+  });
+});
+
 export const getFileById = asyncHandler(async (req, res, next) => {
   const fileId = req.params.id;
   const userId = req.user.sub;
@@ -58,7 +115,6 @@ export const getFileById = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const deleteFile = asyncHandler(async (req, res, next) => {});
 export const getFileStats = asyncHandler(async (req, res, next) => {
   const userId = req.user.sub;
   const totalFiles = await File.countDocuments({ user: userId });
@@ -128,3 +184,5 @@ export const getFileStats = asyncHandler(async (req, res, next) => {
   });
 });
 export const downloadFile = asyncHandler(async (req, res, file) => {});
+
+export const deleteFile = asyncHandler(async (req, res, next) => {});

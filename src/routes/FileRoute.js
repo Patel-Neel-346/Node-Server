@@ -4,11 +4,11 @@ import { authMiddleware } from "../middleware/AuthMiddleware.js";
 import fileUpload from "../middleware/File_Multer_Middleware.js";
 import {
   uploadFile, //done
-  getUserFiles,
+  getUserFiles, //done
   getFileById, //done
   downloadFile,
   deleteFile,
-  getFileStats, //
+  getFileStats, //done
 } from "../controller/FileController.js";
 
 const router = express.Router();
@@ -43,7 +43,7 @@ router.post("/upload", authMiddleware, fileUpload.array("files"), uploadFile);
 
 /**
  * @swagger
- * /api/v1/user/files/:id:
+ * /api/v1/user/files:
  *   get:
  *     summary: Get all files for the authenticated user
  *     tags: [Files]
@@ -133,54 +133,54 @@ router.get("/stats", authMiddleware, getFileStats);
  */
 router.get("/:id", authMiddleware, getFileById);
 
-/**
- * @swagger
- * /api/v1/files/{id}/download:
- *   get:
- *     summary: Download a file
- *     tags: [Files]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: File ID
- *     responses:
- *       200:
- *         description: File stream
- *       404:
- *         description: File not found
- *       401:
- *         description: Unauthorized
- */
-router.get("/:id/download", authMiddleware, downloadFile);
+// /**
+//  * @swagger
+//  * /api/v1/files/{id}/download:
+//  *   get:
+//  *     summary: Download a file
+//  *     tags: [Files]
+//  *     security:
+//  *       - BearerAuth: []
+//  *     parameters:
+//  *       - in: path
+//  *         name: id
+//  *         required: true
+//  *         schema:
+//  *           type: string
+//  *         description: File ID
+//  *     responses:
+//  *       200:
+//  *         description: File stream
+//  *       404:
+//  *         description: File not found
+//  *       401:
+//  *         description: Unauthorized
+//  */
+// router.get("/:id/download", authMiddleware, downloadFile);
 
-/**
- * @swagger
- * /api/v1/files/{id}:
- *   delete:
- *     summary: Delete a file
- *     tags: [Files]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: File ID
- *     responses:
- *       200:
- *         description: File deleted successfully
- *       404:
- *         description: File not found
- *       401:
- *         description: Unauthorized
- */
-router.delete("/:id", authMiddleware, deleteFile);
+// /**
+//  * @swagger
+//  * /api/v1/files/{id}:
+//  *   delete:
+//  *     summary: Delete a file
+//  *     tags: [Files]
+//  *     security:
+//  *       - BearerAuth: []
+//  *     parameters:
+//  *       - in: path
+//  *         name: id
+//  *         required: true
+//  *         schema:
+//  *           type: string
+//  *         description: File ID
+//  *     responses:
+//  *       200:
+//  *         description: File deleted successfully
+//  *       404:
+//  *         description: File not found
+//  *       401:
+//  *         description: Unauthorized
+//  */
+// router.delete("/:id", authMiddleware, deleteFile);
 
 export default router;
