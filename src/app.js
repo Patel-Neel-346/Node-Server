@@ -9,6 +9,8 @@ import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import cors from "cors";
 import swaggerOptions from "./helpers/Swagger.js";
+import fileUpload from "./middleware/File_Multer_Middleware.js";
+import router from "./routes/FileRoute.js";
 
 export const PORT = config.PORT || 6000; // Use environment variable or default to 6000
 const app = express();
@@ -48,7 +50,7 @@ app.use(
 
 // API Routes
 app.use("/api/v1/user", UserRoute);
-
+app.use("/api/v1/user/files", router);
 // Root route redirect to API docs
 app.get("/", (req, res) => {
   res.redirect("/api-docs");

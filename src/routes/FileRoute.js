@@ -1,7 +1,7 @@
 // src/routes/FileRoute.js
 import express from "express";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
-import fileUpload from "../middleware/FileUploadMiddleware.js";
+import fileUpload from "../middleware/File_Multer_Middleware.js";
 import {
   uploadFile,
   getUserFiles,
@@ -15,9 +15,9 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/v1/files/upload:
+ * /api/v1/files/upload/multiple:
  *   post:
- *     summary: Upload a new file
+ *     summary: Upload multiple files (max 5 total per user)
  *     tags: [Files]
  *     security:
  *       - BearerAuth: []
@@ -25,19 +25,21 @@ const router = express.Router();
  *       - multipart/form-data
  *     parameters:
  *       - in: formData
- *         name: file
- *         type: file
+ *         name: files
+ *         type: array
+ *         items:
+ *           type: file
  *         required: true
- *         description: File to upload
+ *         description: Files to upload (only document files, no images)
  *     responses:
  *       201:
- *         description: File uploaded successfully
+ *         description: Files uploaded successfully
  *       400:
- *         description: Invalid request or file type
+ *         description: Invalid request, file type, or maximum number of files reached
  *       401:
  *         description: Unauthorized
  */
-router.post("/upload", authMiddleware, fileUpload.single("file"), uploadFile);
+router.post("/upload", authMiddleware, fileUpload.array("files"), uploadFile);
 
 /**
  * @swagger
