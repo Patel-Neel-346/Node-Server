@@ -40,7 +40,91 @@ export const uploadFile = asyncHandler(async (req, res, next) => {
   }
 });
 export const getUserFiles = asyncHandler(async (req, res, next) => {});
-export const getFileById = asyncHandler(async (req, res, next) => {});
+export const getFileById = asyncHandler(async (req, res, next) => {
+  const fileId = req.params.id;
+  const userId = req.user.sub;
+
+  const file = await File.findOne({ _id: fileId, user: userId })
+    .select("-path -__v")
+    .populate("user");
+
+  if (!file) {
+    throw new ApiError(404, "file not Found!!!");
+  }
+  return res.status(200).json({
+    success: true,
+    message: "File details retrieved successfully",
+    data: file,
+  });
+});
+
 export const deleteFile = asyncHandler(async (req, res, next) => {});
-export const getFileStats = asyncHandler(async (req, res, next) => {});
+export const getFileStats = asyncHandler(async (req, res, next) => {
+  const userId = req.user.sub;
+  const totalFiles = await File.countDocuments({ user: userId });
+
+  const fileSizeResult = await File.aggregate([
+    {
+      $match: {
+        user: userId,
+      },
+    },
+
+    {
+      $group: {
+        _id: null,
+        totalSize: {
+          $sum: "$size",
+        },
+      },
+    },
+  ]);
+  console.log(fileSizeResult);
+  const totalSize = fileSizeResult.length > 0 ? fileSizeResult[0].totalSize : 0;
+  console.log(totalSize);
+  const FileTypeStates = await File.aggregate([
+    {
+      $match: {
+        user: userId,
+      },
+    },
+
+    {
+      $group: {
+        _id: "$mimetype",
+        count: { $sum: 1 },
+        totalSize: { $sum: "$size" },
+      },
+    },
+
+    {
+      $sort: {
+        count: -1,
+      },
+    },
+  ]);
+  console.log(FileTypeStates);
+
+  //format file types for easier reading
+  const fileTypes = FileTypeStates.map((stat) => {
+    const type = stat._id.split("/").pop();
+    return {
+      type,
+      mimetype: stat._id,
+      count: stat.count,
+      totalSize: stat.totalSize,
+    };
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "File Statistics retrived SuccessFully",
+    data: {
+      totalFiles,
+      totalSize,
+      sizeInMB: (totalSize / (1024 * 1024)).toFixed(2),
+      fileTypes,
+    },
+  });
+});
 export const downloadFile = asyncHandler(async (req, res, file) => {});

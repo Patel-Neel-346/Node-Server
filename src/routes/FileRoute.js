@@ -3,12 +3,12 @@ import express from "express";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
 import fileUpload from "../middleware/File_Multer_Middleware.js";
 import {
-  uploadFile,
+  uploadFile, //done
   getUserFiles,
-  getFileById,
+  getFileById, //done
   downloadFile,
   deleteFile,
-  getFileStats,
+  getFileStats, //
 } from "../controller/FileController.js";
 
 const router = express.Router();
@@ -43,7 +43,7 @@ router.post("/upload", authMiddleware, fileUpload.array("files"), uploadFile);
 
 /**
  * @swagger
- * /api/v1/files:
+ * /api/v1/user/files/:id:
  *   get:
  *     summary: Get all files for the authenticated user
  *     tags: [Files]
@@ -94,7 +94,7 @@ router.get("/", authMiddleware, getUserFiles);
 
 /**
  * @swagger
- * /api/v1/files/stats:
+ * /api/v1/user/files/stats:
  *   get:
  *     summary: Get file statistics for the authenticated user
  *     tags: [Files]
@@ -110,7 +110,7 @@ router.get("/stats", authMiddleware, getFileStats);
 
 /**
  * @swagger
- * /api/v1/files/{id}:
+ * /api/v1/user/files/{id}:
  *   get:
  *     summary: Get file details by ID
  *     tags: [Files]
